@@ -1,0 +1,29 @@
+call mtr.add_suppression("MDL deadlock occurs.");
+
+connect (con1,localhost,root,,);
+connect (con2,localhost,root,,);
+
+SET @old_print_mdl_deadlock_loop_info = @@global.print_mdl_deadlock_loop_info;
+set global print_mdl_deadlock_loop_info=true;
+
+connection con1;
+select get_lock("l1", 3600);
+
+connection con2;
+select get_lock("l2", 3600);
+
+connection con1;
+send select get_lock("l2", 3600);
+
+connection con2;
+--error ER_LOCK_DEADLOCK
+select get_lock("l1", 3600);
+select release_lock("l2");
+
+connection con1;
+--reap
+select release_lock("l2");
+select release_lock("l1");
+
+set global print_mdl_deadlock_loop_info = default;
+

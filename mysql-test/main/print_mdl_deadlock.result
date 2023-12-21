@@ -1,0 +1,31 @@
+call mtr.add_suppression("MDL deadlock occurs.");
+connect  con1,localhost,root,,;
+connect  con2,localhost,root,,;
+SET @old_print_mdl_deadlock_loop_info = @@global.print_mdl_deadlock_loop_info;
+set global print_mdl_deadlock_loop_info=true;
+connection con1;
+select get_lock("l1", 3600);
+get_lock("l1", 3600)
+1
+connection con2;
+select get_lock("l2", 3600);
+get_lock("l2", 3600)
+1
+connection con1;
+select get_lock("l2", 3600);
+connection con2;
+select get_lock("l1", 3600);
+ERROR 40001: Deadlock found when trying to get lock; try restarting transaction
+select release_lock("l2");
+release_lock("l2")
+1
+connection con1;
+get_lock("l2", 3600)
+1
+select release_lock("l2");
+release_lock("l2")
+1
+select release_lock("l1");
+release_lock("l1")
+1
+set global print_mdl_deadlock_loop_info = default;
